@@ -3,6 +3,7 @@ import random
 import subprocess
 import tempfile
 import json
+import time
 import base64
 from datetime import datetime
 from instagrapi import Client
@@ -75,14 +76,30 @@ def save_state(state):
 # ── Login ─────────────────────────────────────────────────────────────────────
 def login():
     cl = Client()
+    cl.delay_range = [2, 5]  # random delay between requests
+    cl.set_device({
+        "app_version": "269.0.0.18.75",
+        "android_version": 26,
+        "android_release": "8.0.0",
+        "dpi": "480dpi",
+        "resolution": "1080x1920",
+        "manufacturer": "OnePlus",
+        "device": "ONEPLUS A3010",
+        "model": "OnePlus3T",
+        "cpu": "qcom",
+        "version_code": "314665256",
+    })
+
     if os.path.exists(SESSION_FILE):
         try:
             cl.load_settings(SESSION_FILE)
             cl.login(BOT_USERNAME, BOT_PASSWORD)
             print("✅ Logged in via session")
             return cl
-        except Exception:
-            print("⚠️ Session expired, re-logging")
+        except Exception as e:
+            print(f"⚠️ Session failed: {e}, re-logging")
+
+    time.sleep(random.uniform(3, 7))  # chill before fresh login
     cl.login(BOT_USERNAME, BOT_PASSWORD)
     cl.dump_settings(SESSION_FILE)
     print("✅ Fresh login done")
