@@ -1,0 +1,50 @@
+name: Instagram Claude Bot
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Restore session cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            session.json
+            state.json
+          key: insta-session-${{ runner.os }}
+          restore-keys: insta-session-
+
+      - name: Install system deps
+        run: sudo apt-get install -y ffmpeg
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python deps
+        run: pip install -r requirements.txt
+
+      - name: Run bot
+        env:
+          BOT_INSTA_USERNAME: ${{ secrets.BOT_INSTA_USERNAME }}
+          BOT_INSTA_PASSWORD: ${{ secrets.BOT_INSTA_PASSWORD }}
+          MY_INSTA_USERNAME: ${{ secrets.MY_INSTA_USERNAME }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python main.py
+
+      - name: Save session cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            session.json
+            state.json
+          key: insta-session-${{ runner.os }}
