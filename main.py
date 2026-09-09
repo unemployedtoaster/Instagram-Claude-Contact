@@ -5,6 +5,7 @@ import tempfile
 import json
 import time
 import base64
+import traceback
 from datetime import datetime
 from instagrapi import Client
 import google.generativeai as genai
@@ -97,15 +98,21 @@ def login():
             print("Logged in via session")
             return cl
         except Exception as e:
-            print(f"Session dead: {e}, re-logging in")
+            print(f"Session dead: {e}")
+            traceback.print_exc()
             cl = Client()
             cl.delay_range = [2, 5]
 
-    time.sleep(random.uniform(5, 10))  # chill before fresh login
-    cl.login(BOT_USERNAME, BOT_PASSWORD)
-    cl.dump_settings(SESSION_FILE)
-    print("Fresh login done")
-    return cl
+    try:
+        time.sleep(random.uniform(5, 10))  # chill before fresh login
+        cl.login(BOT_USERNAME, BOT_PASSWORD)
+        cl.dump_settings(SESSION_FILE)
+        print("Fresh login done")
+        return cl
+    except Exception as e:
+        print(f"Login failed: {e}")
+        traceback.print_exc()
+        raise
 
 # ── Download reel ─────────────────────────────────────────────────────────────
 def download_reel(url: str):
@@ -132,7 +139,7 @@ def extract_frame(video_path: str):
 # ── Ask Gemini about the reel ─────────────────────────────────────────────────
 def react_to_reel(video_path: str) -> str:
 
-    # 30% chance of just sending a random joke instead lmaooo
+    # 30% chance of just sending a random joke instead
     if random.random() < 0.30:
         joke = random.choice(JOKES)
         print("Joke mode activated")
@@ -193,6 +200,7 @@ def handle_incoming_reels(cl: Client, state: dict) -> dict:
 
     except Exception as e:
         print(f"DM error: {e}")
+        traceback.print_exc()
 
     return state
 
@@ -211,6 +219,7 @@ def get_random_reel(cl: Client):
         return f"https://www.instagram.com/reel/{reel.code}/"
     except Exception as e:
         print(f"Scrape failed @{account}: {e}")
+        traceback.print_exc()
         return None
 
 # ── Maybe send random reel ────────────────────────────────────────────────────
@@ -240,6 +249,7 @@ def maybe_send_random_reel(cl: Client, state: dict) -> dict:
                 print("Sent random joke")
             except Exception as e:
                 print(f"Joke send failed: {e}")
+                traceback.print_exc()
             return state
 
         reel_url = get_random_reel(cl)
@@ -263,6 +273,7 @@ def maybe_send_random_reel(cl: Client, state: dict) -> dict:
                 print(f"Sent reel #{state['reel_send_count']} today")
             except Exception as e:
                 print(f"Reel send failed: {e}")
+                traceback.print_exc()
 
     return state
 
