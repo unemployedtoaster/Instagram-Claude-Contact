@@ -76,7 +76,7 @@ def save_state(state):
 # ── Login ─────────────────────────────────────────────────────────────────────
 def login():
     cl = Client()
-    cl.delay_range = [2, 5]  # random delay between requests
+    cl.delay_range = [2, 5]
     cl.set_device({
         "app_version": "269.0.0.18.75",
         "android_version": 26,
@@ -93,16 +93,18 @@ def login():
     if os.path.exists(SESSION_FILE):
         try:
             cl.load_settings(SESSION_FILE)
-            cl.login(BOT_USERNAME, BOT_PASSWORD)
-            print("✅ Logged in via session")
+            cl.get_timeline_feed()  # validate session without hitting login endpoint
+            print("Logged in via session")
             return cl
         except Exception as e:
-            print(f"⚠️ Session failed: {e}, re-logging")
+            print(f"Session dead: {e}, re-logging in")
+            cl = Client()
+            cl.delay_range = [2, 5]
 
-    time.sleep(random.uniform(3, 7))  # chill before fresh login
+    time.sleep(random.uniform(5, 10))  # chill before fresh login
     cl.login(BOT_USERNAME, BOT_PASSWORD)
     cl.dump_settings(SESSION_FILE)
-    print("✅ Fresh login done")
+    print("Fresh login done")
     return cl
 
 # ── Download reel ─────────────────────────────────────────────────────────────
@@ -115,7 +117,7 @@ def download_reel(url: str):
     )
     if result.returncode == 0 and os.path.exists(out):
         return out
-    print(f"❌ yt-dlp failed: {result.stderr}")
+    print(f"yt-dlp failed: {result.stderr}")
     return None
 
 # ── Extract frame from video ──────────────────────────────────────────────────
@@ -133,7 +135,7 @@ def react_to_reel(video_path: str) -> str:
     # 30% chance of just sending a random joke instead lmaooo
     if random.random() < 0.30:
         joke = random.choice(JOKES)
-        print("🎲 Joke mode activated 💀")
+        print("Joke mode activated")
         return f"wait actually forget the reel for a sec\n\n{joke}"
 
     frame_path = extract_frame(video_path)
@@ -172,7 +174,7 @@ def handle_incoming_reels(cl: Client, state: dict) -> dict:
             text = msg.text or ""
 
             if any(d in text for d in ig_domains):
-                print(f"📩 Got reel: {text}")
+                print(f"Got reel: {text}")
                 video_path = download_reel(text.strip())
                 if video_path:
                     reply = react_to_reel(video_path)
@@ -185,12 +187,12 @@ def handle_incoming_reels(cl: Client, state: dict) -> dict:
                     reply = random.choice(replies)
 
                 cl.direct_send(reply, thread_ids=[thread.id])
-                print(f"✅ Replied: {reply}")
+                print(f"Replied: {reply}")
 
             state["last_dm_id"] = msg.id
 
     except Exception as e:
-        print(f"❌ DM error: {e}")
+        print(f"DM error: {e}")
 
     return state
 
@@ -198,7 +200,7 @@ def handle_incoming_reels(cl: Client, state: dict) -> dict:
 def get_random_reel(cl: Client):
     category = random.choice(list(SCRAPE_ACCOUNTS.keys()))
     account  = random.choice(SCRAPE_ACCOUNTS[category])
-    print(f"🎲 Scraping @{account} [{category}]")
+    print(f"Scraping @{account} [{category}]")
     try:
         user_id = cl.user_id_from_username(account)
         medias  = cl.user_medias(user_id, amount=20)
@@ -208,7 +210,7 @@ def get_random_reel(cl: Client):
         reel = random.choice(reels)
         return f"https://www.instagram.com/reel/{reel.code}/"
     except Exception as e:
-        print(f"❌ Scrape failed @{account}: {e}")
+        print(f"Scrape failed @{account}: {e}")
         return None
 
 # ── Maybe send random reel ────────────────────────────────────────────────────
@@ -220,11 +222,11 @@ def maybe_send_random_reel(cl: Client, state: dict) -> dict:
         state["last_date"] = today
 
     if state["reel_send_count"] >= 5:
-        print("📵 Daily reel cap hit")
+        print("Daily reel cap hit")
         return state
 
     roll = random.random()
-    print(f"🎲 Reel roll: {roll:.2f} (need < 0.20)")
+    print(f"Reel roll: {roll:.2f} (need < 0.20)")
 
     if roll < 0.20:
         # 20% chance the random send is just a joke instead of a reel
@@ -235,9 +237,9 @@ def maybe_send_random_reel(cl: Client, state: dict) -> dict:
                 joke = random.choice(JOKES)
                 cl.direct_send(f"random thought at {datetime.now().strftime('%H:%M')}:\n\n{joke}", thread_ids=[thread.id])
                 state["reel_send_count"] += 1
-                print("✅ Sent random joke")
+                print("Sent random joke")
             except Exception as e:
-                print(f"❌ Joke send failed: {e}")
+                print(f"Joke send failed: {e}")
             return state
 
         reel_url = get_random_reel(cl)
@@ -258,9 +260,9 @@ def maybe_send_random_reel(cl: Client, state: dict) -> dict:
                 ]
                 cl.direct_send(random.choice(captions), thread_ids=[thread.id])
                 state["reel_send_count"] += 1
-                print(f"✅ Sent reel #{state['reel_send_count']} today")
+                print(f"Sent reel #{state['reel_send_count']} today")
             except Exception as e:
-                print(f"❌ Reel send failed: {e}")
+                print(f"Reel send failed: {e}")
 
     return state
 
@@ -271,4 +273,4 @@ if __name__ == "__main__":
     state = handle_incoming_reels(cl, state)
     state = maybe_send_random_reel(cl, state)
     save_state(state)
-    print("✅ Done")
+    print("Done")
