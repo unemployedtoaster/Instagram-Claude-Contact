@@ -40,7 +40,7 @@ jobs:
           BOT_INSTA_PASSWORD: ${{ secrets.BOT_INSTA_PASSWORD }}
           MY_INSTA_USERNAME: ${{ secrets.MY_INSTA_USERNAME }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: python main.py
+        run: python main.py 2>&1 || true
 
       - name: Save session cache
         if: always()
